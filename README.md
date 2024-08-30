@@ -1,2 +1,2 @@
 # llcn-app
-# llcn-app
+app android e ios em progresso
