@@ -22,23 +22,8 @@
         "image": "latest"
       }
     },
-    "production": {
-      "android": {
-        "image": "latest"
-      },
-      "ios": {
-        "image": "latest"
-      }
-    }
+
   },
   "submit": {
-    "production": {
-      "android": {
-        "image": "latest"
-      },
-      "ios": {
-        "image": "latest"
-      }
-    }
   }
 }

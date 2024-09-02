@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -16,11 +17,11 @@ export type RootStackParamList = {
   Lobby: undefined;
   Login: undefined;
   Register: undefined;
-  Home: { name: string };
+  Home: undefined;
 };
 
 export type LoggedStackParamList = {
-  Home: { name: string };
+  Home: undefined;
 };
 
 const AuthStack = createStackNavigator<RootStackParamList>();
@@ -58,23 +59,46 @@ function AppNavigator() {
         headerLeft: () => <BackButton onPress={() => navigation.goBack()} />,
         headerTitleStyle: styles.headerTitle,
       })}>
-      <AppStack.Screen name="Home" component={Home} options={{ headerTitle: 'Tela Principal' }} />
+      <AppStack.Screen name="Home" component={Home} options={{ headerShown: false }} />
     </AppStack.Navigator>
   );
 }
 
-export default function RootStack() {
+function RootStack() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-      setUser(user);
-    });
+    const checkAuthState = async () => {
+      const firebaseUser = firebaseAuth.currentUser;
+
+      if (firebaseUser) {
+        setUser(firebaseUser);
+      } else {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser) as User);
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, checkAuthState);
+
+    checkAuthState();
 
     return () => unsubscribe();
   }, []);
 
-  return <NavigationContainer>{user ? <AppNavigator /> : <AuthNavigator />}</NavigationContainer>;
+  return user ? <AppNavigator /> : <AuthNavigator />;
+}
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <RootStack />
+    </NavigationContainer>
+  );
 }
 
 const styles = StyleSheet.create({

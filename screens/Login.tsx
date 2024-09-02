@@ -1,12 +1,14 @@
 import { Button, InputItem, Toast, WhiteSpace, WingBlank } from '@ant-design/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { signInWithEmailAndPassword, User } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { RootStackParamList } from 'navigation';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { colors } from 'utils/colors';
-import { firebaseAuth } from 'utils/firebase';
+import { firebaseAuth, firebaseStore } from 'utils/firebase';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -16,15 +18,25 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const auth = firebaseAuth;
+  const store = firebaseStore;
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const isButtonDisabled = loading || !email || !password;
 
   const signIn = async () => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Toast.success('Seja bem-vindo!');
-      navigation.navigate('Home', { name: 'Cíntia' });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      const userDocRef = doc(store, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        AsyncStorage.setItem('user', JSON.stringify(userData));
+        Toast.success('Seja bem-vindo!');
+        navigation.navigate('Home');
+      } else {
+        Toast.fail('Usuário não encontrado.');
+      }
     } catch (error) {
       Toast.fail('Não foi possível acessar, tente novamente');
     } finally {
@@ -66,18 +78,15 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    height: '100%',
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avoidingView: {
-    flex: 1,
     width: '100%',
   },
   FormFlex: {
-    width: '100%',
-    paddingHorizontal: 20,
     gap: 15,
   },
   Input: {
